@@ -1,3 +1,75 @@
+import keras.backend as K
+import tensorflow as tf
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
+K.set_session(tf.Session(config=config))
+
+# Required libraries
+import os
+import pandas as pd
+import IPython as IP
+import struct
+import matplotlib.pyplot as plt
+import numpy as np
+# Set your path to the original dataset
+us8k_path = os.path.abspath('/home/aamer/Desktop/UrbanSound8K' )
+
+# Global settings
+metadata_path = os.path.join(us8k_path, 'metadata/UrbanSound8K.csv')
+audio_path = os.path.join(us8k_path, 'audio')
+
+print("Loading CSV file {}".format(metadata_path))
+
+# Ltqdmoad metadata as a Pandas dataframe
+metadata = pd.read_csv(metadata_path)
+
+# Examine dataframe's head
+metadata.head()
+import sys
+import os
+import IPython as IP
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import librosa
+import librosa.display
+import pickle
+
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from keras.utils import to_categorical
+import numpy as np
+import librosa
+import matplotlib.pyplot as plt
+from sklearn import metrics 
+import os
+import pickle
+import time
+import struct
+import sys
+import os
+import IPython as IP
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import librosa
+import librosa.display
+import pickle
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from keras.utils import to_categorical
+from IPython.display import clear_output, display
+import numpy as np
+import librosa
+import matplotlib.pyplot as plt
+from sklearn import metrics 
+import os
+import pickle
+import time
+import struct
+
+
+
 
 train={}
 test={}
