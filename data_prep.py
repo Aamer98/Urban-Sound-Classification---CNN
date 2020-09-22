@@ -1,80 +1,539 @@
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import os
+
+train={}
+test={}
+#Preparing empty lists for 10 folds
+for fno in range(1,11):
+  train['X_train{}'.format(fno)]=[]
+  test['X_test{}'.format(fno)]=[]
+  train['y_train{}'.format(fno)]=[]
+  test['y_test{}'.format(fno)]=[]
+
+
+
+def add_noise(data):
+    noise = np.random.rand(len(data))
+    noise_amp = random.uniform(0.005, 0.008)
+    data_noise = data + (noise_amp * noise)
+    return data_noise
+
+
+features = []
+labels = []
+frames_max = 0
+counter = 0
+total_samples = len(metadata)
+n_mels=40
+tone_steps = [-1, -2, 1, 2]
+rates = [0.81, 1.07]
+path="/home/aamer/Desktop/UrbanSound8K/audio/fold"
 from tqdm import tqdm
-data=pd.read_csv("/home/aamer/Downloads/UrbanSound8K/metadata/UrbanSound8K.csv")
 
-
-from librosa import display
-import librosa
-
-y,sr=librosa.load("UrbanSound8K/audio/fold5/100263-2-0-137.wav")
-mfccs = np.mean(librosa.feature.mfcc(y, sr, n_mfcc=40).T,axis=0)
-melspectrogram = np.mean(librosa.feature.melspectrogram(y=y, sr=sr, n_mels=40,fmax=8000).T,axis=0)
-chroma_stft=np.mean(librosa.feature.chroma_stft(y=y, sr=sr,n_chroma=40).T,axis=0)
-chroma_cq = np.mean(librosa.feature.chroma_cqt(y=y, sr=sr,n_chroma=40).T,axis=0)
-chroma_cens = np.mean(librosa.feature.chroma_cens(y=y, sr=sr,n_chroma=40).T,axis=0)
-melspectrogram.shape,chroma_stft.shape,chroma_cq.shape,chroma_cens.shape,mfccs.shape
-
-features=np.reshape(np.vstack((mfccs,melspectrogram,chroma_stft,chroma_cq,chroma_cens)),(40,5))
-features.shape
-
-x_train=[]
-x_test=[]
-y_train=[]
-y_test=[]
-path="UrbanSound8K/audio/fold"
-for i in tqdm(range(len(data))):
-    fold_no=str(data.iloc[i]["fold"])
-    file=data.iloc[i]["slice_file_name"]
-    label=data.iloc[i]["classID"]
+for i in tqdm(range(len(metadata))):
+    fold_no=str(metadata.iloc[i]["fold"])
+    file=metadata.iloc[i]["slice_file_name"]
+    label=metadata.iloc[i]["classID"]
+    label_name=metadata.iloc[i]["class"]
     filename=path+fold_no+"/"+file
-    #print(filename)
-    y,sr=librosa.load(filename)
-    mfccs = np.mean(librosa.feature.mfcc(y, sr, n_mfcc=40).T,axis=0)
-    #print(mfccs.shape,mfccs.max(),mfccs.min())
-    if(fold_no!='10'):
-      x_train.append(mfccs)
-      y_train.append(label)
-    else:
-      x_test.append(mfccs)
-      y_test.append(label)
- x_train=[]
-x_test=[]
-y_train=[]
-y_test=[]
-path="UrbanSound8K/audio/fold"
-for i in tqdm(range(len(data))):
-    fold_no=str(data.iloc[i]["fold"])
-    file=data.iloc[i]["slice_file_name"]
-    label=data.iloc[i]["classID"]
-    filename=path+fold_no+"/"+file
-    y,sr=librosa.load(filename)
-    mfccs = np.mean(librosa.feature.mfcc(y, sr, n_mfcc=40).T,axis=0)
-    melspectrogram = np.mean(librosa.feature.melspectrogram(y=y, sr=sr, n_mels=40,fmax=8000).T,axis=0)
-    chroma_stft=np.mean(librosa.feature.chroma_stft(y=y, sr=sr,n_chroma=40).T,axis=0)
-    chroma_cq = np.mean(librosa.feature.chroma_cqt(y=y, sr=sr,n_chroma=40).T,axis=0)
-    chroma_cens = np.mean(librosa.feature.chroma_cens(y=y, sr=sr,n_chroma=40).T,axis=0)
-    features=np.reshape(np.vstack((mfccs,melspectrogram,chroma_stft,chroma_cq,chroma_cens)),(40,5))
-    if(fold_no!='10'):
-      x_train.append(features)
-      y_train.append(label)
-    else:
-      x_test.append(features)
-      y_test.append(label)
+    
+   
+    mels = get_mel_spectrogram(filename, 0, n_mels=n_mels)
+    melsa=spec_augment(mels)
+    num_frames = mels.shape[1]
+
+    y, sr = librosa.load(filename)
+    y_changed = librosa.effects.time_stretch(y, rate=rates[0])
+    melst1 = get_aug_mel_spectrogram(y_changed, sr, 0, n_mels=n_mels)
+    melst1a=spec_augment(melst1)
+    
+    y_changed = librosa.effects.time_stretch(y, rate=rates[1])
+    melst2 = get_aug_mel_spectrogram(y_changed,sr, 0, n_mels=n_mels)
+    melst2a=spec_augment(melst2)
+
+
+    y_changed = librosa.effects.pitch_shift(y, sr, n_steps=tone_steps[0])
+    melsp1 = get_aug_mel_spectrogram(y_changed,sr, 0, n_mels=n_mels)
+    melsp1a=spec_augment(melsp1)
+
+
+    y_changed = librosa.effects.pitch_shift(y, sr, n_steps=tone_steps[1])
+    melsp2 = get_aug_mel_spectrogram(y_changed,sr, 0, n_mels=n_mels)
+    melsp2a=spec_augment(melsp2)
+
+
+    y_changed = librosa.effects.pitch_shift(y, sr, n_steps=tone_steps[2])
+    melsp3= get_aug_mel_spectrogram(y_changed,sr, 0, n_mels=n_mels)
+    melsp3a=spec_augment(melsp3)
+
+
+    y_changed = librosa.effects.pitch_shift(y, sr, n_steps=tone_steps[3])
+    melsp4= get_aug_mel_spectrogram(y_changed,sr, 0, n_mels=n_mels)
+    melsp4a=spec_augment(melsp4)
+
+
+    y_changed = add_noise(y)
+    melsn= get_aug_mel_spectrogram(y_changed,sr, 0, n_mels=n_mels)
+    melsna=spec_augment(melsn)
+
+    
+    features.append(mels)
+    labels.append(label)
+
+    if (num_frames > frames_max):
+      frames_max = num_frames
+    
+    
+    test["X_test{}".format(fold_no)].append(mels)
+    test["y_test{}".format(fold_no)].append(label)
+
+    
+    
+    if label_name=='children_playing':
+
+      test["X_test{}".format(fold_no)].append(melst1)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melst2)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melsp1)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melsp2)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melsp3)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melsp4)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melsn)
+      test["y_test{}".format(fold_no)].append(label)     
+    
+    
+    
+    
+    
+    
+    
+    elif label_name=='drilling':
+
+ 
+
+
+      test["X_test{}".format(fold_no)].append(melsn)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melsa)
+      test["y_test{}".format(fold_no)].append(label)
+
+
+      test["X_test{}".format(fold_no)].append(melsna)
+      test["y_test{}".format(fold_no)].append(label)
+
+
+
+
+    
+   
+
+    
+    elif label_name=='dog_bark':
+    
+      test["X_test{}".format(fold_no)].append(melst1)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melst2)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melsa)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melst1a)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melst2a)
+      test["y_test{}".format(fold_no)].append(label)     
+    
+
+
+
+    elif label_name=='engine_idling':
+
+      test["X_test{}".format(fold_no)].append(melsn)
+      test["y_test{}".format(fold_no)].append(label)
+
+
+    
+    elif label_name=='jackhammer':
+      test["X_test{}".format(fold_no)].append(melst1)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melst2)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melsp1)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melsp2)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melsp3)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melsp4)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melsn)
+      test["y_test{}".format(fold_no)].append(label)
+
+
+    
+    
+    elif label_name=='siren':
+
+
+      test["X_test{}".format(fold_no)].append(melst1)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melst2)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melsp1)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melsp2)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melsp3)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melsp4)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melsn)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melsa)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melst1a)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melst2a)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melsp1a)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melsp2a)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melsp3a)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melsp4a)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melsna)
+      test["y_test{}".format(fold_no)].append(label)
+
+
+    
+    elif label_name=='car_horn':
+
+
+      test["X_test{}".format(fold_no)].append(melst1)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melst2)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melsa)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melst1a)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melst2a)
+      test["y_test{}".format(fold_no)].append(label)     
+    
+    elif label_name=='street_music':
+
+
+      test["X_test{}".format(fold_no)].append(melst1)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melst2)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melsa)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melst1a)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melst2a)
+      test["y_test{}".format(fold_no)].append(label)  
+
+    elif label_name=='gun_shot':
+
+
+      test["X_test{}".format(fold_no)].append(melst1)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melst2)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melsa)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melst1a)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melst2a)
+      test["y_test{}".format(fold_no)].append(label)     
+    
+
+
+
+    elif label_name=='air_conditioner':    
+    
+
+      test["X_test{}".format(fold_no)].append(melst1)
+      test["y_test{}".format(fold_no)].append(label)
+
+      test["X_test{}".format(fold_no)].append(melst2)
+      test["y_test{}".format(fold_no)].append(label)
+
+
+
+    for fno in range(1,11):
       
       
-x_train=np.array(x_train)
-x_test=np.array(x_test)
-y_train=np.array(y_train)
-y_test=np.array(y_test)
+      if fold_no!=str(fno):
+        
+        train["X_train{}".format(fold_no)].append(mels)
+        train["y_train{}".format(fold_no)].append(label)
+        
+        if label_name=='jackhammer':
+          
+          train["X_train{}".format(fold_no)].append(melst1)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melst2)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melsp1)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melsp2)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melsp3)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melsp4)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melsn)
+          train["y_train{}".format(fold_no)].append(label)
 
 
-x_train_2d=np.reshape(x_train,(x_train.shape[0],x_train.shape[1]*x_train.shape[2]))
-x_test_2d=np.reshape(x_test,(x_test.shape[0],x_test.shape[1]*x_test.shape[2]))
 
-np.savetxt("train_data.csv", x_train_2d, delimiter=",")
-np.savetxt("test_data.csv",x_test_2d,delimiter=",")
-np.savetxt("train_labels.csv",y_train,delimiter=",")
-np.savetxt("test_labels.csv",y_test,delimiter=",")
+        elif label_name=='air_conditioner':
+
+
+
+          train["X_train{}".format(fold_no)].append(melst1)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melst2)
+          train["y_train{}".format(fold_no)].append(label)
+
+
+
+
+        
+        elif label_name=='drilling':
+
+
+
+          train["X_train{}".format(fold_no)].append(melsn)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melsa)
+          train["y_train{}".format(fold_no)].append(label)
+
+
+
+          train["X_train{}".format(fold_no)].append(melsna)
+          train["y_train{}".format(fold_no)].append(label) 
+
+
+        
+
+
+
+        elif label_name=='engine_idling':
+        
+
+
+          train["X_train{}".format(fold_no)].append(melsn)
+          train["y_train{}".format(fold_no)].append(label)
+
+
+
+        
+        elif label_name=='children_playing':
+
+
+          train["X_train{}".format(fold_no)].append(melst1)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melst2)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melsp1)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melsp2)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melsp3)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melsp4)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melsn)
+          train["y_train{}".format(fold_no)].append(label)
+        
+
+
+
+        elif label_name=='siren':
+
+          train["X_train{}".format(fold_no)].append(melst1)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melst2)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melsp1)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melsp2)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melsp3)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melsp4)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melsn)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melsa)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melst1a)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melst2a)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melsp1a)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melsp2a)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melsp3a)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melsp4a)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melsna)
+          train["y_train{}".format(fold_no)].append(label)       
+        
+        
+
+        elif label_name=='street_music':
+          
+
+          train["X_train{}".format(fold_no)].append(melst1)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melst2)
+          train["y_train{}".format(fold_no)].append(label)
+       
+          train["X_train{}".format(fold_no)].append(melsa)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melst1a)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melst2a)
+          train["y_train{}".format(fold_no)].append(label) 
+
+
+        elif label_name=='car_horn':
+          
+
+          train["X_train{}".format(fold_no)].append(melst1)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melst2)
+          train["y_train{}".format(fold_no)].append(label)
+       
+          train["X_train{}".format(fold_no)].append(melsa)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melst1a)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melst2a)
+          train["y_train{}".format(fold_no)].append(label)   
+
+
+        elif label_name=='dog_bark':
+
+          train["X_train{}".format(fold_no)].append(melst1)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melst2)
+          train["y_train{}".format(fold_no)].append(label)
+       
+          train["X_train{}".format(fold_no)].append(melsa)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melst1a)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melst2a)
+          train["y_train{}".format(fold_no)].append(label)   
+
+        elif label_name=='gun_shot':
+
+          train["X_train{}".format(fold_no)].append(melst1)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melst2)
+          train["y_train{}".format(fold_no)].append(label)
+       
+          train["X_train{}".format(fold_no)].append(melsa)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melst1a)
+          train["y_train{}".format(fold_no)].append(label)
+
+          train["X_train{}".format(fold_no)].append(melst2a)
+          train["y_train{}".format(fold_no)].append(label)         
+
+
+    
+    counter += 1
+    
